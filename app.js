@@ -29,7 +29,7 @@ const neighbourClass = ['angry', 'v-angry', 'x-angry']
 
 //const neighbours = angry.concat(vAngry, xAngry).sort((a,b) => (a-b));
 
-function drawNeighbours() {
+function drawElements() {
     for (let i = 0; i < angry.length; i++) {
       spaces[angry[i]].classList.add('angry'); 
     };
@@ -41,9 +41,9 @@ function drawNeighbours() {
     };
 }
 
-drawNeighbours()
+drawElements()
 
-function removeNeighbours() {
+function removeElements() {
     for (let i = 0; i < angry.length; i++) {
         spaces[angry[i]].classList.remove('angry'); 
       };
@@ -73,7 +73,7 @@ document.addEventListener('keydown', moveHorn)
 function moveNeighbours()  {
     const leftEdge = angry[0] % width === 0;
     const rightEdge = angry[angry.length-1] % width === (width - 1);
-    removeNeighbours();
+    removeElements();
 
     if (rightEdge && goingRight) {
         direction = -1;
@@ -113,7 +113,7 @@ function moveNeighbours()  {
         xAngry[i] += direction;
     };
 
-    drawNeighbours()
+    drawElements()
 
     if (bottomRow.some(i => neighbourClass.some(c => spaces[i].classList.contains(c)))) {
         //resultsDisplay.innerHTML = 'GAME OVER';
