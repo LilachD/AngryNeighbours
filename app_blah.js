@@ -44,8 +44,8 @@ function hornIndex() {
     return (height - 1) * width + currentHornX;
 }
 
-const neighbours = []
 const notes = []
+const neighbours = []
 
 for (let y = 0; y < 5; y++) {
     for (let x = 0; x < 10; x++) {
@@ -90,7 +90,7 @@ function removeElements() {
     }
 }
 
-function keyAction(e) {
+function keyAction (e) {
     switch (e.key) {
         case 'ArrowLeft':
             moveHorn(-1);
@@ -101,8 +101,84 @@ function keyAction(e) {
         case ' ':
             notes.push(new Note(currentHornX, height - 2, 'note1'));
             break;
-    };
-}
+    }
+};
+
+document.addEventListener('keydown', keyAction);
+
+// Two imperfect attempts to allow moving and shooting simultaneously:
+
+// Attempt 1:
+
+// let arrowRightDown = false;
+// let arrowLeftDown = false;
+// let spaceBarDown = false;
+
+// function keyDown(e) {
+//     switch (e.key) {
+//         case 'ArrowLeft':
+//             moveHorn(-1);
+//             arrowLeftDown = true;
+//             break;
+//         case 'ArrowRight':
+//             moveHorn(1);
+//             arrowRightDown = true;
+//             break;
+//         case ' ':
+//             notes.push(new Note(currentHornX, height - 2, 'note1'));
+//             spaceBarDown = true;
+//             break;
+//     };
+
+//     if (arrowRightDown && spaceBarDown) {
+//         moveHorn(1);
+//         notes.push(new Note(currentHornX, height - 2, 'note1'));
+//     }
+//     if (arrowLeftDown && spaceBarDown) {
+//         moveHorn(-1);
+//         notes.push(new Note(currentHornX, height - 2, 'note1')); 
+//     }
+// }
+
+// function keyUp(e) {
+//     switch (e.key) {
+//         case 'ArrowLeft':
+//             arrowLeftDown = false;
+//             break;
+//         case 'ArrowRight':
+//             arrowRightDown = false;
+//             break;
+//         case ' ':
+//             spaceBarDown = false;
+//             break;
+//     };
+// }
+
+// document.addEventListener('keydown', keyDown);
+// document.addEventListener('keyup', keyUp);
+
+// Attempt 2:
+
+// let keys = {};
+
+// document.addEventListener("keydown", e => keys[e.key] = true);
+
+// document.addEventListener("keyup", e => keys[e.key] = false);
+
+// function keyAction() {
+//   if (keys.ArrowRight && keys[' ']) {
+//     moveHorn(1);
+//     notes.push(new Note(currentHornX, height - 2, 'note1'));
+//   } else if (keys.ArrowRight) {
+//     moveHorn(1);
+//   } else if (keys[' ']) {
+//     notes.push(new Note(currentHornX, height - 2, 'note1'));
+//   }
+
+//   requestAnimationFrame(keyAction);
+// }
+
+// keyAction();
 
 function moveHorn(direction) {
     spaces[hornIndex()].classList.remove('horn');
@@ -112,15 +188,17 @@ function moveHorn(direction) {
     spaces[hornIndex()].classList.add('horn');
 }
 
-document.addEventListener('keydown', keyAction)
 
 function updateBoard() {
     const now = Date.now();
 
     removeElements();
     updateNotes();
+
+    checkForHits();
+    
     //delete dead neighbours
-    if (now - lastNeighbourUpdate > 500) {
+    if (now - lastNeighbourUpdate > 200) {
         lastNeighbourUpdate = now;
         moveNeighbours();
     }
@@ -128,11 +206,11 @@ function updateBoard() {
     drawElements();
     
     //Game-Over
-    if (neighbours.some(n => n.yCoord === height - 2)) {
+    if (neighbours.some(n => n.yCoord === height - 1)) {
         console.log('Game Over');
         // resultsDisplay.innerHTML = 'GAME OVER';
         clearInterval(neighboursId);
-    }    
+    }
 }
 
 function updateNotes() {
@@ -144,6 +222,21 @@ function updateNotes() {
         }
     }
 }
+
+// timing problem:
+function checkForHits() {
+    for (const note of Array.from(notes)) {
+        const hit = neighbours.find(n => n.gridIndex() === note.gridIndex())
+        if(hit) {
+            notes.splice(notes.indexOf(note), 1);
+            hit.health --;
+            if(hit.health == 0) {
+                neighbours.splice(neighbours.indexOf(hit), 1);
+            }            
+        }        
+    }
+}
+
 
 function moveNeighbours() {
     const leftEdge = neighbours.some(n => n.xCoord === 0);
@@ -173,11 +266,6 @@ function moveNeighbours() {
 
 }
 
-
-function playNote(e) {
-
-
-}
 
 
 neighboursId = setInterval(updateBoard, 100)
