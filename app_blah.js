@@ -1,6 +1,7 @@
 const grid = document.querySelector('.grid');
 const horn = document.querySelector('.horn');
 let currentHornX = 7;
+let hornHealth = 3;
 const width = 14;
 const height = 14;
 let direction = 1;
@@ -13,7 +14,7 @@ for (let i = 0; i < 196; i++) {
     grid.appendChild(square);
 }
 
-const spaces = Array.from(document.querySelectorAll('.grid div'))
+const spaces = Array.from(document.querySelectorAll('.grid div'));
 
 class Neighbour {
     constructor(xCoord, yCoord, cssClass, health) {
@@ -40,12 +41,21 @@ class Note {
     }
 }
 
-function hornIndex() {
-    return (height - 1) * width + currentHornX;
+class Expletive {
+    constructor(xCoord, yCoord, cssClass) {
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+        this.cssClass = cssClass;
+    }
+
+    gridIndex() {
+        return this.yCoord * width + this.xCoord;
+    }
 }
 
-const notes = []
-const neighbours = []
+const notes = [];
+const expletives = [];
+const neighbours = [];
 
 for (let y = 0; y < 5; y++) {
     for (let x = 0; x < 10; x++) {
@@ -54,7 +64,12 @@ for (let y = 0; y < 5; y++) {
     }
 }
 
-spaces[hornIndex()].classList.add('horn')
+function hornIndex() {
+    return (height - 1) * width + currentHornX;
+}
+
+spaces[hornIndex()].classList.add('horn');
+
 
 // const angry = [
 //     0,1,2,3,4,5,6,7,8,9,
@@ -76,6 +91,9 @@ function drawElements() {
     for (const note of notes) {
         spaces[note.gridIndex()].classList.add(note.cssClass);
     }
+    for (const expl of expletives) {
+        spaces[expl.gridIndex()].classList.add(expl.cssClass);
+    }
 }
 
 drawElements()
@@ -88,97 +106,17 @@ function removeElements() {
     for (const note of notes) {
         spaces[note.gridIndex()].classList.remove(note.cssClass);
     }
+    for (const expl of expletives) {
+        spaces[expl.gridIndex()].classList.remove(expl.cssClass);
+    }
 }
 
-function keyAction (e) {
-    switch (e.key) {
-        case 'ArrowLeft':
-            moveHorn(-1);
-            break;
-        case 'ArrowRight':
-            moveHorn(1);
-            break;
-        case ' ':
-            notes.push(new Note(currentHornX, height - 2, 'note1'));
-            break;
-    }
-};
+let keyStates = {};
 
-document.addEventListener('keydown', keyAction);
+document.addEventListener("keydown", e => keyStates[e.key] = true);
 
-// Two imperfect attempts to allow moving and shooting simultaneously:
+document.addEventListener("keyup", e => keyStates[e.key] = false);
 
-// Attempt 1:
-
-// let arrowRightDown = false;
-// let arrowLeftDown = false;
-// let spaceBarDown = false;
-
-// function keyDown(e) {
-//     switch (e.key) {
-//         case 'ArrowLeft':
-//             moveHorn(-1);
-//             arrowLeftDown = true;
-//             break;
-//         case 'ArrowRight':
-//             moveHorn(1);
-//             arrowRightDown = true;
-//             break;
-//         case ' ':
-//             notes.push(new Note(currentHornX, height - 2, 'note1'));
-//             spaceBarDown = true;
-//             break;
-//     };
-
-//     if (arrowRightDown && spaceBarDown) {
-//         moveHorn(1);
-//         notes.push(new Note(currentHornX, height - 2, 'note1'));
-//     }
-//     if (arrowLeftDown && spaceBarDown) {
-//         moveHorn(-1);
-//         notes.push(new Note(currentHornX, height - 2, 'note1')); 
-//     }
-// }
-
-// function keyUp(e) {
-//     switch (e.key) {
-//         case 'ArrowLeft':
-//             arrowLeftDown = false;
-//             break;
-//         case 'ArrowRight':
-//             arrowRightDown = false;
-//             break;
-//         case ' ':
-//             spaceBarDown = false;
-//             break;
-//     };
-// }
-
-// document.addEventListener('keydown', keyDown);
-// document.addEventListener('keyup', keyUp);
-
-// Attempt 2:
-
-// let keys = {};
-
-// document.addEventListener("keydown", e => keys[e.key] = true);
-
-// document.addEventListener("keyup", e => keys[e.key] = false);
-
-// function keyAction() {
-//   if (keys.ArrowRight && keys[' ']) {
-//     moveHorn(1);
-//     notes.push(new Note(currentHornX, height - 2, 'note1'));
-//   } else if (keys.ArrowRight) {
-//     moveHorn(1);
-//   } else if (keys[' ']) {
-//     notes.push(new Note(currentHornX, height - 2, 'note1'));
-//   }
-
-//   requestAnimationFrame(keyAction);
-// }
-
-// keyAction();
 
 function moveHorn(direction) {
     spaces[hornIndex()].classList.remove('horn');
@@ -191,22 +129,53 @@ function moveHorn(direction) {
 
 function updateBoard() {
     const now = Date.now();
-
-    removeElements();
-    updateNotes();
-
-    checkForHits();
+    let spaceBarLastState = false;
     
-    //delete dead neighbours
-    if (now - lastNeighbourUpdate > 200) {
+    removeElements();
+
+    if (keyStates['ArrowRight']) {
+        moveHorn(1);
+    }
+    if (keyStates['ArrowLeft']) {
+        moveHorn(-1);
+    }
+
+    if (keyStates[' '] && !spaceBarLastState) {
+        notes.push(new Note(currentHornX, height - 1, 'note1'));
+        keyStates[' '] = false;
+        spaceBarLastState = true;
+    } else if (keyStates[' '] && spaceBarLastState) {
+        keyStates[' '] = false;
+        spaceBarLastState = false;
+    }
+    
+    // updateNeighbourGrid();
+
+    updateNotes();
+    updateExpls();
+    checkForHits();
+
+    const shooters = getFrontNeighbours();
+    for (const shooter of shooters) {
+        if (shooter.yCoord < height - 2 && Math.floor(Math.random() * shooters.length * 10) === shooter.xCoord) {
+            expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1, 'expl1')); 
+        }
+    }
+
+    if (now - lastNeighbourUpdate > 300) {
         lastNeighbourUpdate = now;
         moveNeighbours();
+        checkForHits();
     }
 
     drawElements();
-    
+        
     //Game-Over
-    if (neighbours.some(n => n.yCoord === height - 1)) {
+    if (neighbours.length === 0) {
+        console.log('WINNER');
+        clearInterval(neighboursId);
+    }
+    if (hornHealth === 0 || neighbours.some(n => n.yCoord === height - 1)) {
         console.log('Game Over');
         // resultsDisplay.innerHTML = 'GAME OVER';
         clearInterval(neighboursId);
@@ -223,20 +192,34 @@ function updateNotes() {
     }
 }
 
-// timing problem:
-function checkForHits() {
-    for (const note of Array.from(notes)) {
-        const hit = neighbours.find(n => n.gridIndex() === note.gridIndex())
-        if(hit) {
-            notes.splice(notes.indexOf(note), 1);
-            hit.health --;
-            if(hit.health == 0) {
-                neighbours.splice(neighbours.indexOf(hit), 1);
-            }            
-        }        
+function updateExpls() {
+    for (const expl of Array.from(expletives)) {
+        expl.yCoord += 1;
+        if (expl.yCoord > height - 1) {
+            index = expletives.indexOf(expl);
+            expletives.splice(index, 1);    
+        }
     }
 }
 
+// optimise?? create an array of grid indexes
+function checkForHits() {
+    for (const note of Array.from(notes)) {
+        const hitNeighbour = neighbours.find(n => n.gridIndex() === note.gridIndex())
+        if(hitNeighbour) {
+            notes.splice(notes.indexOf(note), 1);
+            hitNeighbour.health --;
+            if(hitNeighbour.health == 0) {
+                neighbours.splice(neighbours.indexOf(hitNeighbour), 1);
+            }            
+        }        
+    }
+
+    if (expletives.find(e => e.gridIndex() === hornIndex())) {
+            // remove expl cssClass
+            hornHealth --;
+        }            
+}
 
 function moveNeighbours() {
     const leftEdge = neighbours.some(n => n.xCoord === 0);
@@ -258,13 +241,29 @@ function moveNeighbours() {
             neighbour.yCoord++;
             neighbour.xCoord--;
         }
-    }
+    } 
+    
 
     for (const neighbour of neighbours) {
         neighbour.xCoord += direction;
     }
 
 }
+
+function getFrontNeighbours() {
+    const frontNeighbourByX = new Array(width).fill(null);
+
+    for (const neighbour of neighbours) {
+        const x = neighbour.xCoord;
+        const frontNeighbour = frontNeighbourByX[x];
+        if (frontNeighbour == null || neighbour.yCoord > frontNeighbour.yCoord) {
+            frontNeighbourByX[x] = neighbour;
+        }
+    }
+
+    return frontNeighbourByX.filter(n => n != null);
+}
+
 
 
 
