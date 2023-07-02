@@ -40,5 +40,5 @@
 
 .expl1 {
     background-image: url("expl1.svg");
-    background-color: brown;
+    background-size: cover;
 }

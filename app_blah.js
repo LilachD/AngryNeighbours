@@ -1,7 +1,7 @@
 const grid = document.querySelector('.grid');
-const horn = document.querySelector('.horn');
-let currentHornX = 7;
-let hornHealth = 3;
+// const horn = document.querySelector('.horn');
+// let horn.xCoord = 7;
+// let horn.health = 3;
 const width = 14;
 const height = 14;
 let direction = 1;
@@ -53,6 +53,14 @@ class Expletive {
     }
 }
 
+const horn = {
+    xCoord: 7,
+    health: 3,
+    gridIndex: function() {
+        return (height - 1) * width + horn.xCoord;
+    }
+}
+
 const notes = [];
 const expletives = [];
 const neighbours = [];
@@ -64,11 +72,11 @@ for (let y = 0; y < 5; y++) {
     }
 }
 
-function hornIndex() {
-    return (height - 1) * width + currentHornX;
-}
+// function hornIndex() {
+//     return (height - 1) * width + currentHornX;
+// }
 
-spaces[hornIndex()].classList.add('horn');
+spaces[horn.gridIndex()].classList.add('horn');
 
 
 // const angry = [
@@ -119,17 +127,19 @@ document.addEventListener("keyup", e => keyStates[e.key] = false);
 
 
 function moveHorn(direction) {
-    spaces[hornIndex()].classList.remove('horn');
-    currentHornX += direction;
-    if (currentHornX < 0) currentHornX = 0;
-    if (currentHornX > width - 1) currentHornX = width - 1;
-    spaces[hornIndex()].classList.add('horn');
+    spaces[horn.gridIndex()].classList.remove('horn');
+    horn.xCoord += direction;
+    if (horn.xCoord < 0) horn.xCoord = 0;
+    if (horn.xCoord > width - 1) horn.xCoord = width - 1;
+    spaces[horn.gridIndex()].classList.add('horn');
 }
 
 
 function updateBoard() {
     const now = Date.now();
     let spaceBarLastState = false;
+
+    console.log(neighbours[0]);
     
     removeElements();
 
@@ -141,9 +151,7 @@ function updateBoard() {
     }
 
     if (keyStates[' '] && !spaceBarLastState) {
-        notes.push(new Note(currentHornX, height - 1, 'note1'));
-        keyStates[' '] = false;
-        spaceBarLastState = true;
+        notes.push(new Note(horn.xCoord, height - 1, 'note1'))
     } else if (keyStates[' '] && spaceBarLastState) {
         keyStates[' '] = false;
         spaceBarLastState = false;
@@ -157,7 +165,7 @@ function updateBoard() {
 
     const shooters = getFrontNeighbours();
     for (const shooter of shooters) {
-        if (shooter.yCoord < height - 2 && Math.floor(Math.random() * shooters.length * 10) === shooter.xCoord) {
+        if (shooter.yCoord < height - 2 && Math.floor(Math.random() * shooters.length * 5) === shooter.xCoord) {
             expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1, 'expl1')); 
         }
     }
@@ -175,7 +183,7 @@ function updateBoard() {
         console.log('WINNER');
         clearInterval(neighboursId);
     }
-    if (hornHealth === 0 || neighbours.some(n => n.yCoord === height - 1)) {
+    if (horn.health === 0 || neighbours.some(n => n.yCoord === height - 1)) {
         console.log('Game Over');
         // resultsDisplay.innerHTML = 'GAME OVER';
         clearInterval(neighboursId);
@@ -195,6 +203,10 @@ function updateNotes() {
 function updateExpls() {
     for (const expl of Array.from(expletives)) {
         expl.yCoord += 1;
+        // if (expl.xCoord === horn.xCoord && expl.yCoord > height - 2) {
+        //     why isnt this working??
+        //     spaces[expl.gridIndex()].classList.remove(expl.cssClass);
+        // }
         if (expl.yCoord > height - 1) {
             index = expletives.indexOf(expl);
             expletives.splice(index, 1);    
@@ -215,9 +227,8 @@ function checkForHits() {
         }        
     }
 
-    if (expletives.find(e => e.gridIndex() === hornIndex())) {
-            // remove expl cssClass
-            hornHealth --;
+    if (expletives.find(e => e.gridIndex() === horn.gridIndex())) {
+            horn.health --;
         }            
 }
 
