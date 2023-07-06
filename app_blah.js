@@ -1,12 +1,9 @@
 const grid = document.querySelector('.grid');
-// const horn = document.querySelector('.horn');
-// let horn.xCoord = 7;
-// let horn.health = 3;
 const width = 14;
 const height = 14;
 let direction = 1;
-let goingRight = true;
 let lastNeighbourUpdate = Date.now();
+let lastEnemyShot = Date.now();
 let neighboursId;
 
 for (let i = 0; i < 196; i++) {
@@ -16,51 +13,45 @@ for (let i = 0; i < 196; i++) {
 
 const spaces = Array.from(document.querySelectorAll('.grid div'));
 
-class Neighbour {
-    constructor(xCoord, yCoord, cssClass, health) {
+class Entity {
+    constructor(xCoord, yCoord, cssClass) {
         this.xCoord = xCoord;
         this.yCoord = yCoord;
         this.cssClass = cssClass;
+    }
+
+    gridIndex() {
+        return this.yCoord * width + this.xCoord;
+    }
+}
+
+class Neighbour extends Entity {
+    constructor(xCoord, yCoord, cssClass, health) {
+        super(xCoord, yCoord, cssClass);
         this.health = health;
     }
-
-    gridIndex() {
-        return this.yCoord * width + this.xCoord;
-    }
 }
 
-class Note {
+class Note extends Entity {
     constructor(xCoord, yCoord, cssClass) {
-        this.xCoord = xCoord;
-        this.yCoord = yCoord;
-        this.cssClass = cssClass;
-    }
-
-    gridIndex() {
-        return this.yCoord * width + this.xCoord;
+        super(xCoord, yCoord, cssClass);
     }
 }
 
-class Expletive {
+class Expletive extends Entity {
     constructor(xCoord, yCoord, cssClass) {
-        this.xCoord = xCoord;
-        this.yCoord = yCoord;
-        this.cssClass = cssClass;
-    }
-
-    gridIndex() {
-        return this.yCoord * width + this.xCoord;
+        super(xCoord, yCoord, cssClass);
     }
 }
 
-const horn = {
-    xCoord: 7,
-    health: 3,
-    gridIndex: function() {
-        return (height - 1) * width + horn.xCoord;
+class Horn extends Entity {
+    constructor(xCoord, yCoord, cssClass, health) {
+        super(xCoord, yCoord, cssClass);
+        this.health = health;
     }
 }
 
+const horn = new Horn(7, height - 1, 'horn', 3);
 const notes = [];
 const expletives = [];
 const neighbours = [];
@@ -71,10 +62,6 @@ for (let y = 0; y < 5; y++) {
         neighbours.push(neighbour);
     }
 }
-
-// function hornIndex() {
-//     return (height - 1) * width + currentHornX;
-// }
 
 spaces[horn.gridIndex()].classList.add('horn');
 
@@ -120,8 +107,14 @@ function removeElements() {
 }
 
 let keyStates = {};
+let spaceBarHit = false;
 
-document.addEventListener("keydown", e => keyStates[e.key] = true);
+document.addEventListener("keydown", e => {
+    keyStates[e.key] = true;
+    if (e.key === ' ') {
+        spaceBarHit = true;
+    }
+});
 
 document.addEventListener("keyup", e => keyStates[e.key] = false);
 
@@ -137,9 +130,6 @@ function moveHorn(direction) {
 
 function updateBoard() {
     const now = Date.now();
-    let spaceBarLastState = false;
-
-    console.log(neighbours[0]);
     
     removeElements();
 
@@ -150,27 +140,27 @@ function updateBoard() {
         moveHorn(-1);
     }
 
-    if (keyStates[' '] && !spaceBarLastState) {
-        notes.push(new Note(horn.xCoord, height - 1, 'note1'))
-    } else if (keyStates[' '] && spaceBarLastState) {
-        keyStates[' '] = false;
-        spaceBarLastState = false;
+    if (spaceBarHit) {
+        notes.push(new Note(horn.xCoord, height - 1, 'note1'));
     }
-    
-    // updateNeighbourGrid();
+    spaceBarHit = false;
 
     updateNotes();
     updateExpls();
     checkForHits();
 
-    const shooters = getFrontNeighbours();
-    for (const shooter of shooters) {
-        if (shooter.yCoord < height - 2 && Math.floor(Math.random() * shooters.length * 5) === shooter.xCoord) {
-            expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1, 'expl1')); 
+    if (now - lastEnemyShot > 900 || Math.random() < 0.1) {
+        lastEnemyShot = now;
+        const shooters = getFrontNeighbours();
+        if (shooters.length > 0) {
+            const shooter = shooters[Math.floor(Math.random() * shooters.length)];
+            if (shooter.yCoord < height - 2) {
+                expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1, 'expl1')); 
+            }
         }
     }
-
-    if (now - lastNeighbourUpdate > 300) {
+   
+    if (now - lastNeighbourUpdate > 300) { 
         lastNeighbourUpdate = now;
         moveNeighbours();
         checkForHits();
@@ -183,7 +173,7 @@ function updateBoard() {
         console.log('WINNER');
         clearInterval(neighboursId);
     }
-    if (horn.health === 0 || neighbours.some(n => n.yCoord === height - 1)) {
+    if (horn.health <= 0 || neighbours.some(n => n.yCoord === height - 1)) {
         console.log('Game Over');
         // resultsDisplay.innerHTML = 'GAME OVER';
         clearInterval(neighboursId);
@@ -203,13 +193,12 @@ function updateNotes() {
 function updateExpls() {
     for (const expl of Array.from(expletives)) {
         expl.yCoord += 1;
-        // if (expl.xCoord === horn.xCoord && expl.yCoord > height - 2) {
-        //     why isnt this working??
-        //     spaces[expl.gridIndex()].classList.remove(expl.cssClass);
-        // }
-        if (expl.yCoord > height - 1) {
-            index = expletives.indexOf(expl);
-            expletives.splice(index, 1);    
+        if (expl.gridIndex() === horn.gridIndex()) {
+            horn.health --;
+            console.log('damaged!', horn.health);
+            expletives.splice(expletives.indexOf(expl), 1);
+        } else if (expl.yCoord > height - 1) {
+            expletives.splice(expletives.indexOf(expl), 1);    
         }
     }
 }
@@ -225,36 +214,29 @@ function checkForHits() {
                 neighbours.splice(neighbours.indexOf(hitNeighbour), 1);
             }            
         }        
-    }
-
-    if (expletives.find(e => e.gridIndex() === horn.gridIndex())) {
-            horn.health --;
-        }            
+    }         
 }
 
 function moveNeighbours() {
     const leftEdge = neighbours.some(n => n.xCoord === 0);
     const rightEdge = neighbours.some(n => n.xCoord === width - 1);
 
-    if (rightEdge && goingRight) {
+    if (rightEdge && direction > 0) {
         direction = -1;
-        goingRight = false;
         for (const neighbour of neighbours) {
             neighbour.yCoord++;
             neighbour.xCoord++;
         }
     }
 
-    if (leftEdge && !goingRight) {
+    if (leftEdge && direction < 0) {
         direction = 1;
-        goingRight = true;
         for (const neighbour of neighbours) {
             neighbour.yCoord++;
             neighbour.xCoord--;
         }
     } 
     
-
     for (const neighbour of neighbours) {
         neighbour.xCoord += direction;
     }
