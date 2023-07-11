@@ -1,10 +1,14 @@
 const grid = document.querySelector('.grid');
 const width = 14;
 const height = 14;
+const noteClasses = ['note1', 'note2', 'note3', 'note4', 'note5'];
+const explClasses = ['expl1', 'expl2', 'expl3', 'expl4', 'expl5'];
+const neighbourClasses = ['x-angry', 'v-angry', 'angry'];
 let direction = 1;
 let lastNeighbourUpdate = Date.now();
 let lastEnemyShot = Date.now();
 let neighboursId;
+
 
 for (let i = 0; i < 196; i++) {
     const square = document.createElement('div');
@@ -17,67 +21,80 @@ class Entity {
     constructor(xCoord, yCoord, cssClass) {
         this.xCoord = xCoord;
         this.yCoord = yCoord;
-        this.cssClass = cssClass;
+        this._cssClass = cssClass;
     }
 
     gridIndex() {
         return this.yCoord * width + this.xCoord;
     }
+
+    get cssClass() {
+        return this._cssClass;
+    }
 }
 
 class Neighbour extends Entity {
-    constructor(xCoord, yCoord, cssClass, health) {
-        super(xCoord, yCoord, cssClass);
+    constructor(xCoord, yCoord, health) {
+        super(xCoord, yCoord, null);
         this.health = health;
+    }
+
+    get cssClass() {
+        return neighbourClasses[this.health - 1];
     }
 }
 
 class Note extends Entity {
-    constructor(xCoord, yCoord, cssClass) {
+    constructor(xCoord, yCoord) {
+        const cssClass = noteClasses[Math.floor(Math.random() * noteClasses.length)];
         super(xCoord, yCoord, cssClass);
     }
 }
 
 class Expletive extends Entity {
-    constructor(xCoord, yCoord, cssClass) {
+    constructor(xCoord, yCoord) {
+        const cssClass = explClasses[Math.floor(Math.random() * explClasses.length)];
         super(xCoord, yCoord, cssClass);
     }
 }
 
 class Horn extends Entity {
-    constructor(xCoord, yCoord, cssClass, health) {
-        super(xCoord, yCoord, cssClass);
+    constructor(xCoord, yCoord, health) {
+        super(xCoord, yCoord, null);
         this.health = health;
+        this.lastHitTime = 0;
+    }
+
+    get cssClass() {
+        if (Date.now() - this.lastHitTime > 500) {
+            return 'horn';
+        } else { 
+            return 'dead-horn';
+        }
     }
 }
 
-const horn = new Horn(7, height - 1, 'horn', 3);
+const horn = new Horn(7, height - 1, 3);
 const notes = [];
 const expletives = [];
 const neighbours = [];
 
 for (let y = 0; y < 5; y++) {
     for (let x = 0; x < 10; x++) {
-        const neighbour = new Neighbour(x, y, 'angry', 1);
+        const distance = Math.abs(x - 4.5) + y;
+        let health = 3;
+        if (distance > 5) {
+            health = 1;
+        } else if (distance > 3) {
+            health = 2;
+        }   
+
+        const neighbour = new Neighbour(x, y, health);
         neighbours.push(neighbour);
     }
 }
 
 spaces[horn.gridIndex()].classList.add('horn');
-
-
-// const angry = [
-//     0,1,2,3,4,5,6,7,8,9,
-//     14,23,
-//     28,29,34,35,36,37,
-//     42,43,44,45,46,47,48,49,50,51,
-//     56,57,58,59,60,61,62,63,64,65
-// ]
-// const vAngry = [15,16,21,22,30,31,34,35]
-// const xAngry = [17,18,19,20,32,33]
-// const bottomRow = [182,183,184,185,186,187,188,189,190,191,192,193,194,195]
-// const neighbourClass = ['angry', 'v-angry', 'x-angry']
-
 
 function drawElements() {
     for (const neighbour of neighbours) {
@@ -141,7 +158,7 @@ function updateBoard() {
     }
 
     if (spaceBarHit) {
-        notes.push(new Note(horn.xCoord, height - 1, 'note1'));
+        notes.push(new Note(horn.xCoord, height - 1));
     }
     spaceBarHit = false;
 
@@ -155,7 +172,7 @@ function updateBoard() {
         if (shooters.length > 0) {
             const shooter = shooters[Math.floor(Math.random() * shooters.length)];
             if (shooter.yCoord < height - 2) {
-                expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1, 'expl1')); 
+                expletives.push(new Expletive(shooter.xCoord, shooter.yCoord + 1)); 
             }
         }
     }
@@ -210,7 +227,7 @@ function checkForHits() {
         if(hitNeighbour) {
             notes.splice(notes.indexOf(note), 1);
             hitNeighbour.health --;
-            if(hitNeighbour.health == 0) {
+            if(hitNeighbour.health === 0) {
                 neighbours.splice(neighbours.indexOf(hitNeighbour), 1);
             }            
         }        

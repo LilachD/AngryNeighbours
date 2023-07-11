@@ -33,12 +33,57 @@
     background-size: cover;
 }
 
+.dead-horn {
+    background-image: url("dead-horn.svg");
+    background-size: cover;
+}
+
 .note1 {
-    background-image: url("8s.svg");
-    
+    background-image: url("note1.svg");
+    background-size: cover;
+}
+
+.note2 {
+    background-image: url("note2.svg");
+    background-size: cover;
+}
+
+.note3 {
+    background-image: url("note3.svg");
+    background-size: cover;
+}
+
+.note4 {
+    background-image: url("note4.svg");
+    background-size: cover;
+}
+
+.note5 {
+    background-image: url("note5.svg");
+    background-size: cover;
 }
 
 .expl1 {
     background-image: url("expl1.svg");
+    background-size: cover;
+}
+
+.expl2 {
+    background-image: url("expl2.svg");
+    background-size: cover;
+}
+
+.expl3 {
+    background-image: url("expl3.svg");
+    background-size: cover;
+}
+
+.expl4 {
+    background-image: url("expl4.svg");
+    background-size: cover;
+}
+
+.expl5 {
+    background-image: url("expl5.svg");
     background-size: cover;
 }
